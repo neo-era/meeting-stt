@@ -46,10 +46,12 @@ async function loadModel(model, preferWebGPU) {
     } catch (e) {
       lastErr = e;
       transcriber = null;
-      post({ type: 'status', message: `Không dùng được ${device}, thử phương án khác…` });
+      const detail = (e && e.message) ? e.message : String(e);
+      post({ type: 'status', message: `Lỗi ${device}: ${detail.slice(0, 120)}` });
     }
   }
-  throw lastErr || new Error('Không tải được mô hình.');
+  const msg = lastErr && lastErr.message ? lastErr.message : 'Không tải được mô hình.';
+  throw new Error(`[${devices.join('→')}] ${msg}`);
 }
 
 async function transcribe(audio, options) {

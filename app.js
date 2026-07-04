@@ -7,6 +7,9 @@ const progressWrap = $('progressWrap');
 const progressBar = $('progressBar');
 const progressLabel = $('progressLabel');
 const deviceBadge = $('deviceBadge');
+const diag = $('diag');
+const diagText = $('diagText');
+const diagCopy = $('diagCopy');
 const themeToggle = $('themeToggle');
 const modeLive = $('modeLive');
 const modeRecord = $('modeRecord');
@@ -80,10 +83,41 @@ let lastProgressAt = 0;
 const fmtMB = (b) => (b / 1048576).toFixed(1) + ' MB';
 const shortFile = (f) => (f || '').split('/').pop() || 'mô hình';
 
+// ------- Chẩn đoán lỗi (hiện ngay trên màn để chụp gửi lại) -------
+const statusLog = [];
+function logLine(s) {
+  statusLog.push(s);
+  if (statusLog.length > 12) statusLog.shift();
+}
+function envInfo() {
+  return [
+    'UA: ' + navigator.userAgent,
+    'WebGPU: ' + hasWebGPU + ' · mobile: ' + isMobile + ' · online: ' + navigator.onLine,
+    'Mô hình: ' + modelSelect.value,
+    'Nhật ký: ' + (statusLog.slice(-8).join(' | ') || '(trống)'),
+  ].join('\n');
+}
+function showDiag(title, detail) {
+  diagText.textContent = title + '\n\n' + (detail || '') + '\n\n' + envInfo();
+  diag.hidden = false;
+}
+diagCopy.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(diagText.textContent); diagCopy.textContent = 'Đã sao chép'; }
+  catch { diagCopy.textContent = 'Không sao chép được — hãy chụp màn hình'; }
+});
+window.addEventListener('error', (e) => {
+  showDiag('LỖI JS: ' + (e.message || ''), (e.filename || '') + ':' + (e.lineno || ''));
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const r = e.reason;
+  showDiag('LỖI (promise): ' + ((r && r.message) || String(r)), (r && r.stack) ? r.stack.split('\n').slice(0, 4).join('\n') : '');
+});
+
 worker.onmessage = (ev) => {
   const d = ev.data || {};
   if (d.type === 'status') {
     progressLabel.textContent = d.message;
+    logLine(d.message);
   } else if (d.type === 'progress') {
     progressWrap.hidden = false;
     lastProgressAt = Date.now();
@@ -113,6 +147,7 @@ worker.onerror = (e) => {
   progressBar.classList.remove('indeterminate');
   progressLabel.textContent = 'Lỗi: ' + msg;
   setStatus('Lỗi tải/khởi tạo mô hình: ' + msg, true);
+  showDiag('LỖI WORKER: ' + msg, (e && e.filename ? e.filename + ':' + e.lineno : ''));
   pending.forEach(({ reject }) => reject(new Error(msg)));
   pending.clear();
 };
@@ -128,6 +163,7 @@ function call(payload, transfer) {
 async function ensureModel() {
   if (modelReady) return;
   loadBtn.disabled = true;
+  diag.hidden = true;
   progressWrap.hidden = false;
   progressBar.classList.add('indeterminate');
   progressLabel.textContent = 'Đang chuẩn bị tải mô hình…';
@@ -139,7 +175,8 @@ async function ensureModel() {
     }
   }, 5000);
   try {
-    await call({ type: 'load', model: modelSelect.value, preferWebGPU: hasWebGPU });
+    // Trên điện thoại, ép WASM + q8 (đã kiểm chứng) — bỏ WebGPU fp32 còn non trên iOS.
+    await call({ type: 'load', model: modelSelect.value, preferWebGPU: hasWebGPU && !isMobile });
     modelReady = true;
     progressBar.classList.remove('indeterminate');
     progressBar.style.width = '100%';
@@ -150,6 +187,7 @@ async function ensureModel() {
     progressBar.classList.remove('indeterminate');
     progressLabel.textContent = 'Lỗi tải mô hình: ' + e.message;
     setStatus('Không tải được mô hình. Kiểm tra mạng (lần đầu cần internet), thử WiFi hoặc Chrome.', true);
+    showDiag('LỖI TẢI MÔ HÌNH: ' + (e && e.message ? e.message : String(e)), '');
     throw e;
   } finally {
     clearInterval(watchdog);

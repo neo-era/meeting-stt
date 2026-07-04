@@ -109,6 +109,15 @@ select {
 .progress-bar.indeterminate { width: 40%; transition: none; animation: indet 1.2s ease-in-out infinite; }
 @keyframes indet { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
 
+/* Ô chẩn đoán lỗi */
+.diag { border: 1px solid var(--rec); background: var(--rec-soft); border-radius: 12px; padding: 12px 14px; margin: 0 0 14px; }
+.diag-head { font-size: .78rem; font-weight: 600; color: var(--rec); margin-bottom: 8px; }
+.diag pre {
+  margin: 0 0 10px; white-space: pre-wrap; word-break: break-word; user-select: text;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .74rem;
+  color: var(--ink); max-height: 220px; overflow: auto;
+}
+
 /* Modes */
 .modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .mode {
