@@ -2,13 +2,14 @@
 // Lưu ý: file mô hình (Hugging Face) do Transformers.js tự cache trong trình duyệt,
 // nên ở đây không cache lại để tránh chiếm dung lượng gấp đôi.
 
-const CACHE = 'bienban-hop-v1';
+const CACHE = 'bienban-hop-v2';
 const SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './worker.js',
+  './pcm-worklet.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

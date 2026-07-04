@@ -21,9 +21,12 @@
           <p class="tagline">Giọng nói tiếng Việt → văn bản · chạy ngay trên máy</p>
         </div>
       </div>
-      <div class="badges">
-        <span class="badge" id="privacyBadge" title="Toàn bộ xử lý diễn ra trên thiết bị của bạn">Riêng tư · offline</span>
-        <span class="badge badge-muted" id="deviceBadge">—</span>
+      <div class="topbar-right">
+        <button id="themeToggle" class="icon-btn" type="button" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối">🌙</button>
+        <div class="badges">
+          <span class="badge" id="privacyBadge" title="Toàn bộ xử lý diễn ra trên thiết bị của bạn">Riêng tư · offline</span>
+          <span class="badge badge-muted" id="deviceBadge">—</span>
+        </div>
       </div>
     </header>
 
@@ -58,6 +61,10 @@
       </button>
     </div>
 
+    <div class="options">
+      <label class="check"><input type="checkbox" id="tsToggle" /> Chèn mốc thời gian khi ghi chú trực tiếp</label>
+    </div>
+
     <section class="panel recorder">
       <div class="meter" id="meter" aria-hidden="true">
         <canvas id="waveCanvas"></canvas>
@@ -68,6 +75,7 @@
           <span class="rec-dot"></span>
           <span id="recordLabel">Bắt đầu ghi</span>
         </button>
+        <button id="pauseBtn" class="btn btn-ghost" hidden>Tạm dừng</button>
         <span class="timer" id="timer">00:00</span>
       </div>
       <p class="status" id="status">Sẵn sàng.</p>
@@ -77,14 +85,24 @@
       <div class="transcript-head">
         <h2>Nội dung</h2>
         <div class="actions">
+          <button id="saveBtn" class="btn btn-mini" disabled>Lưu phiên</button>
           <button id="copyBtn" class="btn btn-mini" disabled>Sao chép</button>
           <button id="txtBtn" class="btn btn-mini" disabled>Tải .txt</button>
+          <button id="mdBtn" class="btn btn-mini" disabled>Tải .md</button>
           <button id="srtBtn" class="btn btn-mini" disabled>Tải .srt</button>
           <button id="clearBtn" class="btn btn-mini btn-danger" disabled>Xóa</button>
         </div>
       </div>
       <div id="transcript" class="transcript" contenteditable="true" spellcheck="false"
            data-placeholder="Văn bản nhận dạng sẽ hiện ở đây. Bạn có thể sửa trực tiếp trước khi lưu."></div>
+    </section>
+
+    <section class="panel sessions-panel" id="sessionsPanel" hidden>
+      <div class="transcript-head">
+        <h2>Phiên đã lưu</h2>
+        <span class="hint" id="sessionsHint"></span>
+      </div>
+      <ul class="sessions" id="sessionsList"></ul>
     </section>
 
     <footer class="foot">
