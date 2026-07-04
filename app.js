@@ -39,10 +39,10 @@ let paused = false;
 let lastChunks = [];          // dùng cho phụ đề .srt (chế độ bóc băng)
 
 // Đặt mô hình mặc định theo thiết bị
-modelSelect.value = isMobile ? 'huuquyet/PhoWhisper-base' : 'huuquyet/PhoWhisper-small';
+modelSelect.value = isMobile ? 'huuquyet/PhoWhisper-tiny' : 'huuquyet/PhoWhisper-small';
 deviceBadge.textContent = (hasWebGPU ? 'WebGPU' : 'CPU') + (isMobile ? ' · mobile' : '');
 if (isMobile) {
-  modelHint.textContent = 'Trên điện thoại nên dùng Tiny/Base cho nhẹ. Bản chính xác cao nên bóc băng trên máy tính.';
+  modelHint.textContent = 'Trên iPhone/Android nên dùng Tiny (bản nhẹ, lượng tử hóa) để tránh hết RAM. Cần chính xác cao thì bóc băng trên máy tính.';
 }
 
 // ------- Giao diện sáng/tối -------

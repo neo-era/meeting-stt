@@ -25,8 +25,12 @@ async function loadModel(model, preferWebGPU) {
   for (const device of devices) {
     try {
       post({ type: 'status', message: `Đang tải mô hình (${device})…` });
+      // WASM (điện thoại/CPU): dùng trọng số lượng tử hóa q8 để giảm bộ nhớ ~4 lần,
+      // tránh sập tab do hết RAM trên iPhone/Android. WebGPU (máy mạnh): giữ fp32 cho chính xác.
+      const dtype = device === 'webgpu' ? 'fp32' : 'q8';
       transcriber = await pipeline('automatic-speech-recognition', model, {
         device,
+        dtype,
         progress_callback: (p) => {
           if (p && p.status === 'progress') {
             post({ type: 'progress', file: p.file, progress: p.progress || 0 });
