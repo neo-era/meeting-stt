@@ -110,7 +110,7 @@ select {
 @keyframes indet { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
 
 /* Modes */
-.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.modes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .mode {
   text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 13px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 3px;
@@ -132,6 +132,8 @@ select {
 .controls { display: flex; align-items: center; gap: 16px; }
 .timer { font-variant-numeric: tabular-nums; font-size: 1.05rem; font-weight: 600; color: var(--muted); }
 .status { margin: 12px 0 0; font-size: .82rem; color: var(--muted); min-height: 1.2em; }
+.audio-result { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.audio-result audio { width: 100%; }
 
 /* Transcript */
 .transcript-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }

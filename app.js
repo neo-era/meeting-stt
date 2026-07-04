@@ -10,7 +10,11 @@ const deviceBadge = $('deviceBadge');
 const themeToggle = $('themeToggle');
 const modeLive = $('modeLive');
 const modeRecord = $('modeRecord');
+const modeAudio = $('modeAudio');
 const tsToggle = $('tsToggle');
+const audioResult = $('audioResult');
+const audioPlayer = $('audioPlayer');
+const audioDlBtn = $('audioDlBtn');
 const recordBtn = $('recordBtn');
 const recordLabel = $('recordLabel');
 const pauseBtn = $('pauseBtn');
@@ -160,17 +164,22 @@ modelSelect.addEventListener('change', () => { modelReady = false; setStatus('Đ
 function setMode(m) {
   if (recording) return;
   mode = m;
-  const live = m === 'live';
-  modeLive.classList.toggle('active', live);
-  modeRecord.classList.toggle('active', !live);
-  modeLive.setAttribute('aria-selected', String(live));
-  modeRecord.setAttribute('aria-selected', String(!live));
-  setStatus(live
+  modeLive.classList.toggle('active', m === 'live');
+  modeRecord.classList.toggle('active', m === 'record');
+  modeAudio.classList.toggle('active', m === 'audio');
+  modeLive.setAttribute('aria-selected', String(m === 'live'));
+  modeRecord.setAttribute('aria-selected', String(m === 'record'));
+  modeAudio.setAttribute('aria-selected', String(m === 'audio'));
+  const msg = m === 'live'
     ? 'Chế độ ghi chú trực tiếp: chữ hiện dần khi bạn nói.'
-    : 'Chế độ bóc băng: ghi âm cả buổi rồi tạo biên bản + phụ đề.');
+    : m === 'record'
+      ? 'Chế độ bóc băng: ghi âm cả buổi rồi tạo biên bản + phụ đề.'
+      : 'Chế độ chỉ ghi âm: lưu file âm thanh, KHÔNG cần tải mô hình — bóc băng trên máy tính.';
+  setStatus(msg);
 }
 modeLive.addEventListener('click', () => setMode('live'));
 modeRecord.addEventListener('click', () => setMode('record'));
+modeAudio.addEventListener('click', () => setMode('audio'));
 
 // ------- Tiện ích -------
 function setStatus(text, isError) {
@@ -302,22 +311,63 @@ function stopMeter() {
   meterIdle.style.display = '';
 }
 
-// ------- Ghi âm: chế độ BÓC BĂNG -------
+// ------- Ghi âm: chế độ BÓC BĂNG & CHỈ GHI ÂM -------
 let mediaRecorder = null, recChunks = [], recStream = null, recCtx = null;
-async function startRecordMode() {
+
+// Chọn định dạng ghi âm phù hợp trình duyệt (Safari iOS thường ra audio/mp4).
+function pickMime() {
+  const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg'];
+  for (const c of cands) if (window.MediaRecorder && MediaRecorder.isTypeSupported(c)) return c;
+  return '';
+}
+function extFor(mime) {
+  if (/webm/.test(mime)) return 'webm';
+  if (/mp4|m4a|aac/.test(mime)) return 'm4a';
+  if (/ogg/.test(mime)) return 'ogg';
+  if (/wav/.test(mime)) return 'wav';
+  return 'audio';
+}
+
+async function startRecorder(onStop) {
   recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const AC = window.AudioContext || window.webkitAudioContext;
   recCtx = new AC();
   startMeter(recCtx, recCtx.createMediaStreamSource(recStream));
   recChunks = [];
-  const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+  const mime = pickMime();
   mediaRecorder = new MediaRecorder(recStream, mime ? { mimeType: mime } : undefined);
   mediaRecorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
-  mediaRecorder.onstop = onRecordStop;
+  mediaRecorder.onstop = onStop;
   mediaRecorder.start();
   startTimer();
+}
+
+async function startRecordMode() {
+  await startRecorder(onRecordStop);
   setStatus('Đang ghi âm… Nhấn “Dừng” khi kết thúc để bóc băng.');
 }
+
+// Chế độ CHỈ GHI ÂM: không tải mô hình, chỉ lưu file để bóc băng nơi khác.
+let audioBlob = null, audioUrl = null;
+async function startAudioMode() {
+  audioResult.hidden = true;
+  await startRecorder(onAudioStop);
+  setStatus('Đang ghi âm… Nhấn “Dừng” để lưu file (mở trên máy tính để bóc băng).');
+}
+function onAudioStop() {
+  const type = (mediaRecorder && mediaRecorder.mimeType) || 'audio/webm';
+  audioBlob = new Blob(recChunks, { type });
+  cleanupStream();
+  if (audioUrl) URL.revokeObjectURL(audioUrl);
+  audioUrl = URL.createObjectURL(audioBlob);
+  audioPlayer.src = audioUrl;
+  audioResult.hidden = false;
+  setStatus('Đã ghi xong. Nghe thử rồi “Tải file ghi âm”, mở trên máy tính để bóc băng chính xác.');
+}
+audioDlBtn.addEventListener('click', () => {
+  if (!audioBlob) return;
+  download(`ghi_am_hop_${stamp()}.${extFor(audioBlob.type)}`, audioBlob, audioBlob.type);
+});
 async function onRecordStop() {
   const blob = new Blob(recChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
   cleanupStream();
@@ -442,23 +492,25 @@ function endRecordingUI() {
 
 recordBtn.addEventListener('click', async () => {
   if (recording) {
-    const wasRecordMode = mode === 'record';
+    const m = mode;
     endRecordingUI();
-    if (wasRecordMode) { mediaRecorder && mediaRecorder.state !== 'inactive' && mediaRecorder.stop(); }
+    if (m === 'record' || m === 'audio') { mediaRecorder && mediaRecorder.state !== 'inactive' && mediaRecorder.stop(); }
     else { stopLive(); setStatus('Đã dừng.'); }
     return;
   }
-  try {
-    await ensureModel();
-  } catch { return; }
+  // Chỉ chế độ live/record mới cần mô hình; chế độ chỉ-ghi-âm bỏ qua bước tải.
+  if (mode !== 'audio') {
+    try { await ensureModel(); } catch { return; }
+  }
   try {
     recording = true;
     paused = false;
     recordBtn.classList.add('recording');
-    recordLabel.textContent = mode === 'record' ? 'Dừng & bóc băng' : 'Dừng';
+    recordLabel.textContent = mode === 'record' ? 'Dừng & bóc băng' : (mode === 'audio' ? 'Dừng & lưu file' : 'Dừng');
     pauseBtn.hidden = false;
     pauseBtn.textContent = 'Tạm dừng';
     if (mode === 'record') await startRecordMode();
+    else if (mode === 'audio') await startAudioMode();
     else await startLiveMode();
   } catch (e) {
     endRecordingUI();
@@ -470,14 +522,15 @@ pauseBtn.addEventListener('click', () => {
   if (!recording) return;
   paused = !paused;
   pauseBtn.textContent = paused ? 'Tiếp tục' : 'Tạm dừng';
+  const usesRecorder = mode === 'record' || mode === 'audio';
   if (paused) {
     pauseTimer();
-    if (mode === 'record' && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.pause();
+    if (usesRecorder && mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.pause();
     setStatus('Đã tạm dừng. Nhấn “Tiếp tục” để ghi tiếp.');
   } else {
     resumeTimer();
-    if (mode === 'record' && mediaRecorder && mediaRecorder.state === 'paused') mediaRecorder.resume();
-    setStatus(mode === 'record' ? 'Đang ghi âm…' : 'Đang nghe…');
+    if (usesRecorder && mediaRecorder && mediaRecorder.state === 'paused') mediaRecorder.resume();
+    setStatus(usesRecorder ? 'Đang ghi âm…' : 'Đang nghe…');
   }
 });
 
@@ -644,7 +697,7 @@ saveBtn.addEventListener('click', async () => {
   }
 });
 
-// khởi tạo
-setMode('live');
+// khởi tạo — điện thoại vào chế độ "Chỉ ghi âm" cho chắc (iOS thường không đủ RAM chạy mô hình)
+setMode(isMobile ? 'audio' : 'live');
 updateActionButtons();
 renderSessions();

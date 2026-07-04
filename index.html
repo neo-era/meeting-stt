@@ -59,6 +59,10 @@
         <strong>Bóc băng chính xác</strong>
         <span>Ghi âm cả buổi rồi tạo biên bản + phụ đề</span>
       </button>
+      <button class="mode" id="modeAudio" role="tab" aria-selected="false">
+        <strong>Chỉ ghi âm</strong>
+        <span>Lưu file âm thanh — không cần tải mô hình (hợp cho điện thoại)</span>
+      </button>
     </div>
 
     <div class="options">
@@ -79,6 +83,10 @@
         <span class="timer" id="timer">00:00</span>
       </div>
       <p class="status" id="status">Sẵn sàng.</p>
+      <div class="audio-result" id="audioResult" hidden>
+        <audio id="audioPlayer" controls></audio>
+        <button id="audioDlBtn" class="btn btn-ghost">Tải file ghi âm</button>
+      </div>
     </section>
 
     <section class="panel transcript-panel">
