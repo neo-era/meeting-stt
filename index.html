@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0E8F8C" />
+  <title>Biên bản họp – Ghi âm & chuyển giọng nói tiếng Việt</title>
+  <meta name="description" content="Ghi âm cuộc họp và chuyển giọng nói tiếng Việt sang văn bản, chạy hoàn toàn trên máy, không gửi dữ liệu lên mạng." />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot" aria-hidden="true"></span>
+        <div>
+          <h1>Biên bản họp</h1>
+          <p class="tagline">Giọng nói tiếng Việt → văn bản · chạy ngay trên máy</p>
+        </div>
+      </div>
+      <div class="badges">
+        <span class="badge" id="privacyBadge" title="Toàn bộ xử lý diễn ra trên thiết bị của bạn">Riêng tư · offline</span>
+        <span class="badge badge-muted" id="deviceBadge">—</span>
+      </div>
+    </header>
+
+    <section class="panel setup">
+      <div class="field">
+        <label for="modelSelect">Mô hình nhận dạng</label>
+        <select id="modelSelect">
+          <option value="huuquyet/PhoWhisper-tiny">PhoWhisper Tiny · nhẹ nhất, nhanh (điện thoại)</option>
+          <option value="huuquyet/PhoWhisper-base">PhoWhisper Base · cân bằng</option>
+          <option value="huuquyet/PhoWhisper-small">PhoWhisper Small · chính xác tốt (khuyên dùng máy tính)</option>
+          <option value="huuquyet/PhoWhisper-medium">PhoWhisper Medium · chính xác cao (cần máy mạnh)</option>
+          <option value="huuquyet/PhoWhisper-large">PhoWhisper Large · chính xác nhất (máy tính có GPU)</option>
+        </select>
+        <p class="hint" id="modelHint">Lần đầu chọn mô hình sẽ tải về (cần mạng một lần), sau đó dùng được offline.</p>
+      </div>
+      <button id="loadBtn" class="btn btn-ghost">Tải mô hình</button>
+    </section>
+
+    <div class="progress-wrap" id="progressWrap" hidden>
+      <div class="progress-label" id="progressLabel">Đang chuẩn bị…</div>
+      <div class="progress-track"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+
+    <div class="modes" role="tablist" aria-label="Chế độ">
+      <button class="mode active" id="modeLive" role="tab" aria-selected="true">
+        <strong>Ghi chú trực tiếp</strong>
+        <span>Hiện chữ gần như tức thời khi họp</span>
+      </button>
+      <button class="mode" id="modeRecord" role="tab" aria-selected="false">
+        <strong>Bóc băng chính xác</strong>
+        <span>Ghi âm cả buổi rồi tạo biên bản + phụ đề</span>
+      </button>
+    </div>
+
+    <section class="panel recorder">
+      <div class="meter" id="meter" aria-hidden="true">
+        <canvas id="waveCanvas"></canvas>
+        <span class="meter-idle" id="meterIdle">Nhấn nút để bắt đầu</span>
+      </div>
+      <div class="controls">
+        <button id="recordBtn" class="btn btn-record">
+          <span class="rec-dot"></span>
+          <span id="recordLabel">Bắt đầu ghi</span>
+        </button>
+        <span class="timer" id="timer">00:00</span>
+      </div>
+      <p class="status" id="status">Sẵn sàng.</p>
+    </section>
+
+    <section class="panel transcript-panel">
+      <div class="transcript-head">
+        <h2>Nội dung</h2>
+        <div class="actions">
+          <button id="copyBtn" class="btn btn-mini" disabled>Sao chép</button>
+          <button id="txtBtn" class="btn btn-mini" disabled>Tải .txt</button>
+          <button id="srtBtn" class="btn btn-mini" disabled>Tải .srt</button>
+          <button id="clearBtn" class="btn btn-mini btn-danger" disabled>Xóa</button>
+        </div>
+      </div>
+      <div id="transcript" class="transcript" contenteditable="true" spellcheck="false"
+           data-placeholder="Văn bản nhận dạng sẽ hiện ở đây. Bạn có thể sửa trực tiếp trước khi lưu."></div>
+    </section>
+
+    <footer class="foot">
+      <span>PhoWhisper (VinAI) + Transformers.js · chạy trong trình duyệt</span>
+      <span>Khuyên dùng Chrome hoặc Edge để có WebGPU.</span>
+    </footer>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
