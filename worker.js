@@ -33,7 +33,7 @@ async function loadModel(model, preferWebGPU) {
         dtype,
         progress_callback: (p) => {
           if (p && p.status === 'progress') {
-            post({ type: 'progress', file: p.file, progress: p.progress || 0 });
+            post({ type: 'progress', file: p.file, progress: p.progress || 0, loaded: p.loaded || 0, total: p.total || 0 });
           } else if (p && p.status) {
             post({ type: 'status', message: `${p.status}: ${p.file || ''}` });
           }

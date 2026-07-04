@@ -106,6 +106,8 @@ select {
 .progress-label { font-size: .78rem; color: var(--muted); margin-bottom: 6px; }
 .progress-track { height: 8px; background: #E7ECF1; border-radius: 999px; overflow: hidden; }
 .progress-bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-strong)); transition: width .2s; }
+.progress-bar.indeterminate { width: 40%; transition: none; animation: indet 1.2s ease-in-out infinite; }
+@keyframes indet { 0% { margin-left: -40%; } 100% { margin-left: 100%; } }
 
 /* Modes */
 .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }

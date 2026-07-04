@@ -71,6 +71,10 @@ themeToggle.addEventListener('click', () => {
 const worker = new Worker('./worker.js', { type: 'module' });
 let msgId = 0;
 const pending = new Map();
+let lastProgressAt = 0;
+
+const fmtMB = (b) => (b / 1048576).toFixed(1) + ' MB';
+const shortFile = (f) => (f || '').split('/').pop() || 'mô hình';
 
 worker.onmessage = (ev) => {
   const d = ev.data || {};
@@ -78,15 +82,35 @@ worker.onmessage = (ev) => {
     progressLabel.textContent = d.message;
   } else if (d.type === 'progress') {
     progressWrap.hidden = false;
-    const pct = Math.round((d.progress || 0));
-    progressBar.style.width = pct + '%';
-    progressLabel.textContent = `Đang tải: ${d.file || ''} — ${pct}%`;
+    lastProgressAt = Date.now();
+    const total = d.total || 0, loaded = d.loaded || 0;
+    if (total > 0) {
+      const pct = Math.min(100, Math.round((loaded / total) * 100));
+      progressBar.classList.remove('indeterminate');
+      progressBar.style.width = pct + '%';
+      progressLabel.textContent = `Đang tải ${shortFile(d.file)} — ${pct}%`;
+    } else {
+      // Máy chủ không báo dung lượng: dùng thanh chạy vô định + số MB đã tải.
+      progressBar.classList.add('indeterminate');
+      progressLabel.textContent = `Đang tải ${shortFile(d.file)} — ${fmtMB(loaded)}`;
+    }
   } else if (d.id && pending.has(d.id)) {
     const { resolve, reject } = pending.get(d.id);
     pending.delete(d.id);
     if (d.type === 'error') reject(new Error(d.message));
     else resolve(d);
   }
+};
+
+// Worker chết/không khởi tạo được (vd. trình duyệt cũ không hỗ trợ module worker,
+// hoặc chặn tải thư viện từ CDN) — hiện lỗi thay vì treo im lặng.
+worker.onerror = (e) => {
+  const msg = (e && e.message) || 'Worker gặp lỗi (trình duyệt có thể không hỗ trợ, hoặc bị chặn tải thư viện).';
+  progressBar.classList.remove('indeterminate');
+  progressLabel.textContent = 'Lỗi: ' + msg;
+  setStatus('Lỗi tải/khởi tạo mô hình: ' + msg, true);
+  pending.forEach(({ reject }) => reject(new Error(msg)));
+  pending.clear();
 };
 
 function call(payload, transfer) {
@@ -101,19 +125,30 @@ async function ensureModel() {
   if (modelReady) return;
   loadBtn.disabled = true;
   progressWrap.hidden = false;
+  progressBar.classList.add('indeterminate');
   progressLabel.textContent = 'Đang chuẩn bị tải mô hình…';
+  lastProgressAt = Date.now();
+  // Cảnh báo nếu quá lâu không có tiến triển (mạng chậm / bị chặn).
+  const watchdog = setInterval(() => {
+    if (Date.now() - lastProgressAt > 25000) {
+      setStatus('Tải đang chậm hoặc bị chặn. Thử mạng WiFi, hoặc mở bằng Chrome. Lần đầu cần tải ~40MB.', true);
+    }
+  }, 5000);
   try {
     await call({ type: 'load', model: modelSelect.value, preferWebGPU: hasWebGPU });
     modelReady = true;
+    progressBar.classList.remove('indeterminate');
     progressBar.style.width = '100%';
     progressLabel.textContent = 'Đã sẵn sàng.';
     setTimeout(() => { progressWrap.hidden = true; }, 800);
     setStatus('Mô hình đã sẵn sàng. Nhấn “Bắt đầu ghi”.');
   } catch (e) {
+    progressBar.classList.remove('indeterminate');
     progressLabel.textContent = 'Lỗi tải mô hình: ' + e.message;
-    setStatus('Không tải được mô hình. Kiểm tra kết nối mạng lần đầu.', true);
+    setStatus('Không tải được mô hình. Kiểm tra mạng (lần đầu cần internet), thử WiFi hoặc Chrome.', true);
     throw e;
   } finally {
+    clearInterval(watchdog);
     loadBtn.disabled = false;
   }
 }
